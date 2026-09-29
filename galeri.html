@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pozelook fotoğraf portfolyosu.">
+  <title>Galeri | pozelook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="gallery-page" data-page="gallery">
+  <header class="gallery-header">
+    <a class="wordmark" href="index.html" aria-label="pozelook ana sayfa">poze<span>look</span></a>
+    <a class="back-link" href="index.html"><span aria-hidden="true">&#8592;</span> Kategoriler</a>
+  </header>
+  <main class="gallery-main">
+    <div class="gallery-intro">
+      <p class="kicker">Pozelook portfolyo</p>
+      <h1 id="categoryTitle">Fotoğraf galerisi</h1>
+      <p id="status" class="loading-note">Fotoğraflar yükleniyor...</p>
+    </div>
+    <div id="projects" class="projects" aria-live="polite"></div>
+  </main>
+  <footer class="site-footer">© <span id="year"></span> pozelook</footer>
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotoğraf görüntüleyici">
+    <button class="lightbox-close" id="lbClose" aria-label="Kapat">Kapat <span aria-hidden="true">&#215;</span></button>
+    <button class="lightbox-arrow previous" id="lbPrev" aria-label="Önceki fotoğraf">&#8592;</button>
+    <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+    <button class="lightbox-arrow next" id="lbNext" aria-label="Sonraki fotoğraf">&#8594;</button>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
