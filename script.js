@@ -14,9 +14,9 @@ const CONFIG = {
   photosDir: "photos",
   heroFolder: "kapak",
 
-  owner: "",
-  repo: "",
-  branch: ""
+  owner: "sebrar",
+  repo: "test_photo",
+  branch: "main"
 };
 
 const TITLES = {
