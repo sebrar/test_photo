@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolyo</title>
+  <meta name="description" content="Fotoğraf portfolyosu">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="header" class="header">
+    <a class="brand" href="#top" id="brand">Ad Soyad</a>
+    <nav class="menu" aria-label="Ana menü">
+      <a href="#work">Çalışmalar</a>
+      <a href="#about">Hakkında</a>
+      <a href="#contact">İletişim</a>
+    </nav>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="slides" id="slides"></div>
+    <div class="hero-text">
+      <p class="eyebrow">Nature • Wedding • Portrait</p>
+      <h1 id="heroName">Ad Soyad</h1>
+      <p id="heroTag"></p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#contact">Randevu Al</a>
+        <a class="btn secondary" href="#work">Portföy</a>
+      </div>
+      <ul class="hero-stats" aria-label="Öne çıkan istatistikler">
+        <li><strong>9+</strong><span>Yıl deneyim</span></li>
+        <li><strong>140+</strong><span>Gerçekleşen çekim</span></li>
+        <li><strong>5.0</strong><span>Müşteri memnuniyeti</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec services">
+    <div class="section-head">
+      <p class="eyebrow dark">Hizmetler</p>
+      <h2>Anlara ait en doğal ve zarif anlatım.</h2>
+    </div>
+    <div class="service-grid">
+      <article class="service-card">
+        <span class="service-number">01</span>
+        <h3>Düğün Çekimleri</h3>
+        <p>Sevginin en özel anlarını, duygunun en saf halini hafızanızda bırakacak şekilde kaydederiz.</p>
+      </article>
+      <article class="service-card">
+        <span class="service-number">02</span>
+        <h3>Portre Çalışmaları</h3>
+        <p>Doğal ışık, dikkatli kompozisyon ve kişisel anlatım ile güçlü ve özgün portreler üretiriz.</p>
+      </article>
+      <article class="service-card">
+        <span class="service-number">03</span>
+        <h3>Kurumsal Çekimler</h3>
+        <p>Marka değerini yansıtan profesyonel, modern ve güven veren görseller hazırlıyoruz.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec" id="work">
+    <div class="section-head inline">
+      <p class="eyebrow dark">Çalışmalar</p>
+      <h2>Son projeler</h2>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="sec" id="galleryWrap">
+    <div class="bar">
+      <h2 id="galTitle">Tüm fotoğraflar</h2>
+      <div class="filters" id="filters" role="group" aria-label="Kategori filtresi"></div>
+    </div>
+    <p class="status" id="status">Fotoğraflar yükleniyor…</p>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section class="sec about" id="about">
+    <img id="aboutImg" alt="" hidden>
+    <div>
+      <h2>Hakkında</h2>
+      <p id="aboutText"></p>
+    </div>
+  </section>
+
+  <section class="sec contact" id="contact">
+    <h2>İletişim</h2>
+    <p id="contactText"></p>
+    <div class="links" id="contactLinks"></div>
+  </section>
+
+  <footer class="foot"><span id="footText"></span></footer>
+
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotoğraf görüntüleyici">
+    <button class="lb lb-close" id="lbClose">Kapat</button>
+    <button class="lb lb-prev" id="lbPrev" aria-label="Önceki">‹</button>
+    <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+    <button class="lb lb-next" id="lbNext" aria-label="Sonraki">›</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
