@@ -15,10 +15,11 @@ const page = document.body.dataset.page || "home";
 const $ = (id) => document.getElementById(id);
 let lightboxPhotos = [];
 let lightboxIndex = 0;
+let lastFocus = null;
 
 function prettyName(key) {
   if (CATEGORY_TITLES[key]) return CATEGORY_TITLES[key];
-  const name = decodeURIComponent(key).replace(/[-_]+/g, " ").trim();
+  const name = decodeURIComponent(key).replace(/^\d+[-_.\s]+/, "").replace(/[-_]+/g, " ").trim();
   return name.charAt(0).toLocaleUpperCase("tr") + name.slice(1);
 }
 
@@ -50,7 +51,7 @@ async function listLocal(path) {
       type: isDirectory ? "dir" : "file",
       name,
       path: `${path}/${name}`,
-      download_url: `${path}/${name}`
+      download_url: `${path}/${encodeURIComponent(name)}`
     });
   });
   return entries;
@@ -59,11 +60,18 @@ async function listLocal(path) {
 async function listDirectory(path) {
   const { owner, repo } = repository();
   if (!owner || !repo) return listLocal(path);
+  const cacheKey = `pl:${owner}/${repo}/${path}`;
+  try {
+    const hit = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+    if (hit && Date.now() - hit.t < 10 * 60 * 1000) return hit.d;
+  } catch {}
   const branch = CONFIG.branch ? `?ref=${encodeURIComponent(CONFIG.branch)}` : "";
   const endpoint = `https://api.github.com/repos/${owner}/${repo}/contents/${path}${branch}`;
   const response = await fetch(endpoint, { headers: { Accept: "application/vnd.github+json" } });
   if (!response.ok) throw new Error(`Fotoğraf klasörü okunamadı (GitHub ${response.status}).`);
-  return response.json();
+  const data = await response.json();
+  try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), d: data })); } catch {}
+  return data;
 }
 
 function imageFiles(entries) {
@@ -81,31 +89,43 @@ async function loadCategories() {
   return entries
     .filter((entry) => entry.type === "dir" && !entry.name.startsWith(".") && entry.name !== "kapak")
     .map((entry) => ({ ...entry, label: prettyName(entry.name) }))
-    .sort((a, b) => a.label.localeCompare(b.label, "tr"));
+    .sort((a, b) => a.name.localeCompare(b.name, "tr", { numeric: true }));
 }
 
-function renderCategoryLinks(categories) {
+async function loadCovers() {
+  try {
+    const map = {};
+    imageFiles(await listDirectory(`${CONFIG.photosDir}/kapak`)).forEach((f) => { map[f.name.replace(/\.[^.]+$/, "").toLowerCase()] = imageSource(f); });
+    return map;
+  } catch { return {}; }
+}
+
+function renderCategoryLinks(categories, covers = {}) {
   const nav = $("categoryList");
   nav.replaceChildren();
   if (!categories.length) {
-    $("status").textContent = "Henüz kategori yok. Fotoğraflar klasörüne kategori klasörü ekleyin.";
+    nav.append(Object.assign(document.createElement("p"), { className: "loading-note", textContent: "Henüz kategori yok. Fotoğraflar klasörüne kategori klasörü ekleyin." }));
     return;
   }
-  categories.forEach((category, index) => {
+  categories.forEach((category) => {
     const link = document.createElement("a");
     link.className = "category-link";
     link.href = `galeri.html?tur=${encodeURIComponent(category.name)}`;
-    const number = document.createElement("span");
-    number.className = "category-index";
-    number.textContent = String(index + 1).padStart(2, "0");
+    const src = covers[category.name.toLowerCase()];
+    if (src) {
+      const img = document.createElement("img");
+      img.className = "category-cover";
+      img.src = src;
+      img.alt = "";
+      link.append(img);
+    }
     const label = document.createElement("span");
     label.className = "category-name";
     label.textContent = category.label;
-    const arrow = document.createElement("span");
-    arrow.className = "category-arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "→";
-    link.append(number, label, arrow);
+    const cta = document.createElement("span");
+    cta.className = "category-cta";
+    cta.textContent = "Galeriyi aç";
+    link.append(label, cta);
     nav.append(link);
   });
 }
@@ -126,9 +146,40 @@ function photoButton(photo, label, className) {
   image.src = imageSource(photo);
   image.alt = label;
   image.loading = "lazy";
-  button.append(image);
+  image.decoding = "async";
+  const reveal = () => image.classList.add("loaded");
+  image.addEventListener("load", reveal);
+  image.addEventListener("error", reveal);
+  if (image.complete) reveal();
+  const badge = document.createElement("span");
+  badge.className = "expand-badge";
+  badge.setAttribute("aria-hidden", "true");
+  badge.textContent = "\u2922";
+  button.append(image, badge);
   button.addEventListener("click", () => openLightbox(index));
   return button;
+}
+
+function shelfControls(shelf) {
+  const nav = document.createElement("div");
+  nav.className = "shelf-nav";
+  const make = (text, label, dir) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "shelf-btn"; b.textContent = text; b.setAttribute("aria-label", label);
+    b.addEventListener("click", () => shelf.scrollBy({ left: dir * shelf.clientWidth * 0.8, behavior: "smooth" }));
+    return b;
+  };
+  const prev = make("\u2190", "Önceki fotoğraflar", -1), next = make("\u2192", "Sonraki fotoğraflar", 1);
+  const update = () => {
+    const end = shelf.scrollLeft + shelf.clientWidth >= shelf.scrollWidth - 4;
+    prev.disabled = shelf.scrollLeft < 4; next.disabled = end; shelf.classList.toggle("at-end", end);
+  };
+  shelf.addEventListener("scroll", update, { passive: true });
+  shelf.addEventListener("load", update, true);
+  addEventListener("resize", update);
+  requestAnimationFrame(update);
+  nav.append(prev, next);
+  return nav;
 }
 
 function createProject(title, photos) {
@@ -144,7 +195,10 @@ function createProject(title, photos) {
   name.textContent = title;
   const count = document.createElement("p");
   count.textContent = `${sortedPhotos.length + 1} fotoğraf`;
-  heading.append(name, count);
+  const side = document.createElement("div");
+  side.className = "heading-side";
+  side.append(count);
+  heading.append(name, side);
 
   const layout = document.createElement("div");
   layout.className = "project-layout";
@@ -153,6 +207,7 @@ function createProject(title, photos) {
   shelf.className = "project-shelf";
   sortedPhotos.forEach((photo) => shelf.append(photoButton(photo, title, "project-photo")));
   layout.append(shelf);
+  if (sortedPhotos.length) side.append(shelfControls(shelf));
   project.append(heading, layout);
   return project;
 }
@@ -180,15 +235,15 @@ async function renderGallery() {
   const projectList = [];
   const loosePhotos = imageFiles(entries);
   if (loosePhotos.length) projectList.push(createProject("Genel seçki", loosePhotos));
-  for (const folder of projectEntries) {
-    const photos = imageFiles(await listDirectory(folder.path));
-    if (photos.length) projectList.push(createProject(prettyName(folder.name), photos));
-  }
+  const folderPhotos = await Promise.all(projectEntries.map(async (folder) => imageFiles(await listDirectory(folder.path))));
+  projectEntries.forEach((folder, i) => {
+    if (folderPhotos[i].length) projectList.push(createProject(prettyName(folder.name), folderPhotos[i]));
+  });
 
   const projects = $("projects");
   projects.replaceChildren(...projectList.filter(Boolean));
   $("status").textContent = projectList.some(Boolean)
-    ? ""
+    ? "Büyütmek için bir fotoğrafa tıklayın; sağdaki sıra oklarla veya kaydırarak gezilir."
     : "Bu kategoride henüz fotoğraf yok. Organizasyon klasörünü eklediğinizde galeri burada görünür.";
 }
 
@@ -199,13 +254,15 @@ function openLightbox(index) {
   $("lbImg").src = photo.src;
   $("lbImg").alt = photo.label;
   $("lbCap").textContent = `${photo.label} · ${lightboxIndex + 1} / ${lightboxPhotos.length}`;
-  $("lightbox").hidden = false;
+  if ($("lightbox").hidden) { lastFocus = document.activeElement; $("lightbox").hidden = false; $("lbClose").focus(); }
   document.body.style.overflow = "hidden";
+  [lightboxIndex - 1, lightboxIndex + 1].forEach((n) => { new Image().src = lightboxPhotos[(n + lightboxPhotos.length) % lightboxPhotos.length].src; });
 }
 
 function closeLightbox() {
   $("lightbox").hidden = true;
   document.body.style.overflow = "";
+  if (lastFocus) lastFocus.focus();
 }
 
 function bindLightbox() {
@@ -214,6 +271,12 @@ function bindLightbox() {
   $("lbNext").addEventListener("click", () => openLightbox(lightboxIndex + 1));
   $("lightbox").addEventListener("click", (event) => {
     if (event.target.id === "lightbox") closeLightbox();
+  });
+  let startX = 0;
+  $("lightbox").addEventListener("touchstart", (e) => { startX = e.touches[0].clientX; }, { passive: true });
+  $("lightbox").addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) openLightbox(lightboxIndex + (dx < 0 ? 1 : -1));
   });
   document.addEventListener("keydown", (event) => {
     if ($("lightbox").hidden) return;
@@ -225,7 +288,7 @@ function bindLightbox() {
 
 $("year").textContent = new Date().getFullYear();
 if (page === "home") {
-  loadCategories().then(renderCategoryLinks).catch((error) => {
+  Promise.all([loadCategories(), loadCovers()]).then(([c, covers]) => renderCategoryLinks(c, covers)).catch((error) => {
     console.error(error);
     $("status").textContent = `Kategoriler yüklenemedi: ${error.message}`;
   });
